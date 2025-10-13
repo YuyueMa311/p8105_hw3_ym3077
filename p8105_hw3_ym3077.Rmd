@@ -66,6 +66,25 @@ pop_items = instacart |>
 pop_items
 ```
 
+Table with mean hour of the day that Pink Lady Apples and Coffee Ice Cream were ordered on each day of the weak
+```{r}
+meanhour_table = instacart |>
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarize(
+    mean_hour = mean(order_hour_of_day, na.rm = TRUE)) |>
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_hour) |>
+  knitr::kable(digits = 1)
+
+meanhour_table
+```
+
+
+## Problem 2
+
+
 
 
 
