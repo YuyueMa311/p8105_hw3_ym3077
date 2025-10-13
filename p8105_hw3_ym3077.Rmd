@@ -15,20 +15,56 @@ library(p8105.datasets)
 data("instacart")
 
 instacart_summary = list(instacart)
-instacart_summary
+head(instacart,10)
 ```
 This `instacart` dataset has `r nrow(instacart)` observations for 131,209 users and `r ncol(instacart)` variables/rows, where each row represents a product from a single order and is associated with a customer.    
 The 15 variables in this dataset are: `order_id` (order identifier), `product_id` (product identifier), `add_to_cart_order` (order of each product was added to cart), `reordered` (1 if ordered before, 0 otherwise), `user_id` (customer identifier), `eval_set` (which evaluation this order belongs to), `order_number` (the order number for this user, 1=first, n=nth), `order_dow` (the day of the week when this order was placed), `order_hour_of_day` (the hour of the day when this order was placed), `days_since_prior_order` (days since the last order, capped at 30, NA if order_number=1), `product_name` (name of the product), `aisle_id`(aisle identifier), `department_id` (department identifier), `aisle` (the name of the aisle), `department` (department this product belongs to).
 
 ```{r}
+n_aisles = instacart |>
+  distinct(aisle) |>
+  nrow()
+
+aisle_summary = instacart |>
+  group_by(aisle) |>
+  summarize(n_orders = n()) |>
+  arrange(desc(n_orders))
+
+n_aisles
+aisle_summary
+```
+There are 134 aisles on the dataset, and fresh vegetables is the aisle with the most items ordered from.
 
 
+Plot the number of items ordered in each aisle (>10000 orders)
+```{r}
+aisle_plot = instacart |>
+  group_by(aisle) |>
+  summarize(n_orders = n()) |>
+  filter(n_orders > 10000) |>
+  mutate(aisle = fct_reorder(aisle, n_orders)) 
+
+ggplot(aisle_plot, aes(x = aisle, y = n_orders)) + 
+  geom_col(fill = "purple") +
+  labs(
+    title = "Items ordered by aisle (> 10000 orders)",
+    x = "Aisle",
+    y = "Number of items ordered") +
+  theme_minimal(base_size = 10) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
 
+Table with three most popular items in “baking ingredients”, “dog food care”, and “packaged vegetables fruits”
+```{r}
+pop_items = instacart |>
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  group_by(aisle, product_name) |>
+  summarize(n_orders = n()) |>
+  arrange(aisle, desc(n_orders)) |>
+  slice_head(n=3)
 
-
-
-
+pop_items
+```
 
 
 
