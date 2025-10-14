@@ -6,6 +6,7 @@ output: github_document
 Load packages
 ```{r}
 library(tidyverse)
+library(lubridate)
 ```
 
 ## Problem 1
@@ -83,6 +84,82 @@ meanhour_table
 
 
 ## Problem 2
+
+Import, clean, and otherwise tidy these datasets.
+```{r}
+zillow <- read_csv("data/Zip_zori_uc_sfrcondomfr_sm_month_NYC.csv") |> 
+ janitor::clean_names()
+
+zipcode <- read_csv("data/Zip Codes.csv") |> 
+ janitor::clean_names()
+
+zillow_clean <- zillow |> 
+  pivot_longer(
+    cols = starts_with("x"),
+    names_to = "date",
+    values_to = "zori"
+  ) |>
+  mutate(
+    date = str_remove(date, "^x"),    
+    date = ymd(date),               
+    year = year(date),
+    month = month(date, label = TRUE, abbr = FALSE),
+    zip = as.character(region_name)
+  )
+
+zipcode_clean <- zipcode |> 
+  select(zip_code, borough = county, neighborhood) |> 
+  rename(zip = zip_code) |> 
+  mutate(zip = as.character(zip))
+
+zillow_merged <- left_join(zillow_clean, zipcode_clean, by = "zip", relationship = "many-to-many")
+
+zillow_merged <- zillow_merged |>
+  select(-state_name) |>
+  select(zip, region_id, region_name, region_type, state, city, county_name, borough,
+         neighborhood, year, month, date, zori, everything()) |>
+  arrange(zip, year, match(month, month.name))
+
+zillow_merged
+```
+
+There are 116 months between January 2015 and August 2024. How many ZIP codes are observed 116 times? How many are observed fewer than 10 times? Why are some ZIP codes are observed rarely and others observed in each month?
+```{r}
+zip_summary <- zillow_merged |>
+  filter(!is.na(zori)) |>
+  group_by(zip) |>
+  summarize(n_months = n_distinct(date))
+
+zip_116 <- zip_summary |>
+  summarize(n = sum(n_months == 116))
+zip_116
+
+zip_10 <-zip_summary |>
+  summarize(n = sum(n_months < 10))
+zip_10
+```
+There are 48 ZIP codes are observed 116 times, and 26 ZIP codes are observed fewer than 10 times. ZIP codes observed in each month might locate at highly populated residential areas (ie. Manhattan) with frequently updated rental markets information; while others are observed rarely might locate at low residential activity area (ie. few rental listings, industrial or commercial zones).
+
+
+Create a reader-friendly table showing the average rental price in each borough and year (not month). Comment on trends in this table.
+```{r}
+borough_yr <- zillow_merged |>
+  filter(!is.na(zori)) |>
+  group_by(borough, year) |>
+  summarize(
+    mean_zori = mean(zori)) |>
+  pivot_wider(
+    names_from = year,
+    values_from = mean_zori)
+
+borough_yr
+```
+Manhattan (New York County) has the highest price every year with a wide margin. There’s a huge decrease during 2020–2021 followed by a sharp rebound and new highs by 2023–2024.   
+Brooklyn (Kings) and Queens sit in the middle tier with steady increases through 2024. 
+The Bronx is consistently the lowest-price borough, but it still shows a clear upward trend over the decade. 
+Richmond (Staten Island) has missing early years, but from 2020 to 2024, it shows a steady increase, consistent with post-pandemic recovery. 
+Overall trend across boroughs is slight growth pre-COVID, a decrease in 2020–2021, and strong acceleration by 2022–2024, with Manhattan leading and Bronx lowest throughout.
+
 
 
 
